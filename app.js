@@ -7,6 +7,8 @@ const cors = require('cors')
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 const path = require("path");
+const fs = require("fs");
+
 const app = express();
 
 const http = require("http").Server(app);
@@ -21,9 +23,25 @@ const store = new MongoDBStore({
 });
 
 
+app.use(cors()) // Use this after the variable declaration
+
+
+app.use(express.static(path.join(__dirname, "public")));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
+app.use('/videos', express.static(path.join(__dirname, 'videos')));
+app.use('/temp', express.static(path.join(__dirname, 'temp')));
+
+
+
 const io = require('./socket').init(http)
 
+
 io.of('/video').on("connection", socket => {
+
+    console.log(socket.id);
 
     // SocketEvent.load_upload_video(socket)
 
@@ -39,7 +57,13 @@ io.of('/video').on("connection", socket => {
         }
         var Place = 0;
         try {
-            var Stat = fs.statSync(__dirname + '/temp/' + name);
+            var templateDir = path.join(__dirname, '/temp/', name);
+            console.log(templateDir);
+            
+            const vidpath = __dirname + '/temp/' + name
+            var Stat = fs.statSync(templateDir);
+            console.log(Stat);
+            
             if (Stat.isFile()) {
                 Files[name]['Downloaded'] = Stat.size;
                 Place = Stat.size / 524288;
@@ -49,7 +73,7 @@ io.of('/video').on("connection", socket => {
         catch (err) {
             console.log(err);
         } //It's a New File
-        fs.open(__dirname + "/temp/" + name, "a", 0755, function (err, fd) {
+        fs.open(process.cwd() + "/temp/" + name, "a", 0755, function (err, fd) {
             if (err) {
 
                 console.log(err);
@@ -61,6 +85,8 @@ io.of('/video').on("connection", socket => {
         });
     })
     socket.on('upload', function (data) {
+
+        console.log('start Uploading');
 
         var Name = data['Name'];
 
@@ -89,8 +115,8 @@ io.of('/video').on("connection", socket => {
                     console.log(err);
                 }
                 Files[Name]['Data'] = ""; //Reset The Buffer
-                var Place = Files[Name]['Downloaded'] / 524288;
                 var Percent = (Files[Name]['Downloaded'] / Files[Name]['FileSize']) * 100;
+                var Place = Files[Name]['Downloaded'] / 524288;
                 socket.emit('more-data', { 'Place': Place, 'Percent': Percent });
             });
 
@@ -110,21 +136,14 @@ io.of('/video').on("connection", socket => {
     });
 });
 
+app.use((req, res, next) => {
+  res.setHeader('Service-Worker-Allowed', '/');
 
-
-
-
-app.use(express.static(path.join(__dirname, "public")));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use('/images', express.static(path.join(__dirname, 'images')));
-
-app.use('/videos', express.static(path.join(__dirname, 'videos')));
-app.use('/temp', express.static(path.join(__dirname, 'temp')));
-
-app.use(cors()) // Use this after the variable declaration
-
-
+  // res.setHeader('Access-Control-Allow-Origin', '*');
+  // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  // res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 
 app.use(
   session({
