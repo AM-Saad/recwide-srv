@@ -32,7 +32,7 @@ exports.signUp = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   try {
     const user = await User.findOne({ email: email });
@@ -50,7 +50,7 @@ exports.login = async (req, res, next) => {
         image: user.profilePicture
       },
       "SomeSuperAsecretBymy",
-      { expiresIn: "9h" }
+      { expiresIn: rememberMe ? '' : "9h" }
     );
 
     req.user = { _id: user._id, name: user.name, }

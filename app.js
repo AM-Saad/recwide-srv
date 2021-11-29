@@ -18,8 +18,8 @@ const http = require("http").Server(app);
 const MONGODBURI = `mongodb+srv://abdelrhman:ingodwetrust@onlineshop-zsiuv.mongodb.net/recwide`;
 
 const store = new MongoDBStore({
-  uri: MONGODBURI,
-  collection: 'sessions'
+    uri: MONGODBURI,
+    collection: 'sessions'
 });
 
 
@@ -48,42 +48,87 @@ io.of('/video').on("connection", socket => {
     let Files = {};
 
     socket.on('start', function (data) {
-        console.log('starting');
+        console.log(data)
         var name = data['Name'];
-        Files[name] = {
-            FileSize: data['Size'],
-            Data: "",
-            Downloaded: 0
-        }
-        var Place = 0;
-        try {
-            var templateDir = path.join(__dirname, '/temp/', name);
-            console.log(templateDir);
-            
-            const vidpath = __dirname + '/temp/' + name
-            var Stat = fs.statSync(templateDir);
-            console.log(Stat);
-            
-            if (Stat.isFile()) {
-                Files[name]['Downloaded'] = Stat.size;
-                Place = Stat.size / 524288;
-                console.log('eh');
-            }
-        }
-        catch (err) {
-            console.log(err);
-        } //It's a New File
-        fs.open(process.cwd() + "/temp/" + name, "a", 0755, function (err, fd) {
-            if (err) {
+        let filePath = __dirname + "/temp/" + name
+        console.log(filePath)
 
-                console.log(err);
+        if (fs.existsSync(filePath)) {
+            console.log('exist')
+
+            Files[name] = {
+                FileSize: data['Size'],
+                Data: "",
+                Downloaded: 0
             }
-            else {
-                Files[name]['Handler'] = fd; //We store the file handler so we can write to it later
-                socket.emit('more-data', { 'Place': Place, Percent: 0 });
+            var Place = 0;
+            try {
+
+                var Stat = fs.statSync(__dirname + '/temp/' + name);
+                console.log(filePath)
+                if (Stat && Stat.isFile()) {
+                    Files[name]['Downloaded'] = Stat.size;
+                    Place = Stat.size / 524288;
+                }
             }
-        });
+            catch (err) {
+                console.log(err)
+
+            }
+            //It's a New File
+            fs.open(filePath, "a", 0755, function (err, fd) {
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    Files[name]['Handler'] = fd; //We store the file handler so we can write to it later
+                    socket.emit('more-data', { 'Place': Place, Percent: 0 });
+
+                }
+            });
+        } else {
+
+            fs.writeFile(filePath, '', "Binary", function (err) {
+                if (err) {
+                    console.log(err)
+                };
+                Files[name] = {
+                    FileSize: data['Size'],
+                    Data: "",
+                    Downloaded: 0
+                }
+                var Place = 0;
+                console.log(data['Size'])
+                try {
+
+                    var Stat = fs.statSync(__dirname + '/temp/' + name);
+                    if (Stat && Stat.isFile()) {
+                        Files[name]['Downloaded'] = Stat.size;
+                        Place = Stat.size / 524288;
+                    }
+                }
+                catch (err) {
+                    console.log(err)
+
+                }
+
+                //It's a New File
+                fs.open(filePath, "a", 0755, function (err, fd) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    else {
+                        Files[name]['Handler'] = fd; //We store the file handler so we can write to it later
+                        socket.emit('more-data', { 'Place': Place, Percent: 0 });
+
+                    }
+                });
+            });
+        }
+
     })
+
+
     socket.on('upload', function (data) {
 
         console.log('start Uploading');
@@ -94,6 +139,8 @@ io.of('/video').on("connection", socket => {
         Files[Name]['Data'] += data['Data'];
         if (Files[Name]['Downloaded'] == Files[Name]['FileSize']) //If File is Fully Uploaded
         {
+            console.log(Files[Name]['Handler']);
+
             console.log('1');
 
             fs.write(Files[Name]['Handler'], Files[Name]['Data'], null, 'Binary', function (err, Writen) {
@@ -115,8 +162,8 @@ io.of('/video').on("connection", socket => {
                     console.log(err);
                 }
                 Files[Name]['Data'] = ""; //Reset The Buffer
-                var Percent = (Files[Name]['Downloaded'] / Files[Name]['FileSize']) * 100;
                 var Place = Files[Name]['Downloaded'] / 524288;
+                var Percent = (Files[Name]['Downloaded'] / Files[Name]['FileSize']) * 100;
                 socket.emit('more-data', { 'Place': Place, 'Percent': Percent });
             });
 
@@ -136,22 +183,23 @@ io.of('/video').on("connection", socket => {
     });
 });
 
-app.use((req, res, next) => {
-  res.setHeader('Service-Worker-Allowed', '/');
 
-  // res.setHeader('Access-Control-Allow-Origin', '*');
-  // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  // res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
+app.use((req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/');
+
+    // res.setHeader('Access-Control-Allow-Origin', '*');
+    // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    // res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
 });
 
 app.use(
-  session({
-    secret: 'my secret',
-    resave: false,
-    saveUninitialized: false,
-    store: store
-  })
+    session({
+        secret: 'my secret',
+        resave: false,
+        saveUninitialized: false,
+        store: store
+    })
 );
 
 
@@ -164,17 +212,17 @@ app.use('/user', userRoutes);
 
 
 mongoose
-  .connect(MONGODBURI)
-  .then(result => {
- 
-    console.log(`Connected to db..`);
-  })
-  .catch(err => {
-    console.log(`error is ${err}`);
-  });
+    .connect(MONGODBURI)
+    .then(result => {
 
-  let port = process.env.PORT || 3000
+        console.log(`Connected to db..`);
+    })
+    .catch(err => {
+        console.log(`error is ${err}`);
+    });
 
-  http.listen(port, function () {
-      console.log('listening on *:3000');
-  });
+let port = process.env.PORT || 3000
+
+http.listen(port, function () {
+    console.log('listening on *:3000');
+});

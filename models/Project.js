@@ -3,8 +3,12 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const projectSchema = new Schema({
-    user: { type: mongoose.Types.ObjectId, ref:'User' },
+    user: { type: mongoose.Types.ObjectId, ref: 'User' },
     name: {
+        type: String,
+        required: true
+    },
+    slug: {
         type: String,
         required: true
     },
@@ -16,8 +20,13 @@ const projectSchema = new Schema({
         type: String,
         required: true
     },
-    resolution: {
-        type: String,
+    resolution:{
+        aspectRatio:{
+            ideal:Number
+        },
+        height:Number,
+        width:Number,
+        frameRate:Number,
     },
     videos: [
         {
@@ -26,7 +35,7 @@ const projectSchema = new Schema({
             extension: String
         }
     ],
-    date:String
+    date: String
 
 });
 

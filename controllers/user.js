@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Video = require("../models/Video");
 const Project = require("../models/Project");
 const bcrypt = require("bcryptjs");
-
+const fs = require('fs')
 
 
 exports.user = async (req, res, next) => {
@@ -21,11 +21,32 @@ exports.user = async (req, res, next) => {
 };
 
 
+exports.allprojects = async (req, res, next) => {
+
+    try {
+
+        let projects = await Project.find({})
+        console.log(projects);
+        return res.status(200).json({ message: "Video Fetched", projects: projects });
+    } catch (error) {
+
+        if (!error.statusCode) {
+            return (error.statusCode = 500);
+        }
+        next(error);
+    }
+};
+
 exports.projects = async (req, res, next) => {
 
     try {
         const user = await User.findById(req.user.id)
         if (!user) return res.status(404).json({ message: "User NOT found!!", messageType: 'info' });
+        // await Project.deleteMany({})
+        // user.projects = []
+        // await user.save()
+        // await User.deleteMany({})
+
         let projects = await user.populate('projects').execPopulate()
         console.log(projects);
         return res.status(200).json({ message: "Video Fetched", projects: projects.projects });
@@ -43,24 +64,24 @@ exports.createProject = async (req, res, next) => {
     const { videos, name, mode, audioSettings, resolution, videotype, date } = req.body
     try {
         const user = await User.findById(req.user.id)
-        // user.projects = []
-        // await Project.deleteMany({})
-        // await user.save()
-        // await User.deleteMany({})
 
         let projectvideos = videos.map((i) => ({
             name: i,
-            url: `/videos/${i}.${videotype}`
+            url: `/videos/${i}.${videotype}`,
+            extension: videotype
         }))
+        console.log(resolution);
+
         const newProject = new Project({
             videos: projectvideos,
             name,
+            slug: name.trim().replace("", "-"),
             mode,
             audioSettings,
             resolution,
             extension: videotype,
             user: user._id,
-            date: date
+            date: date,
         })
         await newProject.save()
         user.projects.push(newProject._id)
@@ -75,7 +96,7 @@ exports.createProject = async (req, res, next) => {
         //     extension: videotype
         // })
         let projects = await user.populate('projects').execPopulate()
-        return res.status(200).json({ message: 'Created', messageType: 'success', projects: projects.projects })
+        return res.status(200).json({ message: 'Created', messageType: 'success', projects: projects.projects, projectId: newProject.slug })
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;
@@ -85,13 +106,30 @@ exports.createProject = async (req, res, next) => {
 };
 
 
-exports.deleteVideo = async (req, res, next) => {
+exports.deleteProject = async (req, res, next) => {
 
-    const name = req.params.name
+    const id = req.params.id
     const relative_path = process.cwd()
+    try {
+        const project = await Project.findById(id)
+        if (!project) return res.status(404).json({ message: "Project Not Found!!", messageType: 'info' });
+        project.videos.forEach(p => {
+            fs.unlinkSync(relative_path + p.url);
+        })
+        const user = await User.findById(project.user)
+        if (!user) return res.status(404).json({ message: "User Not Found!!", messageType: 'info' });
+        user.videos = user.projects.filter(p => p._id.toString() != id.toString())
+        await user.save()
+        await project.delete()
+        let projects = await user.populate('projects').execPopulate()
+        return res.status(200).json({ message: 'Deleted', messageType: 'success', projects: projects.projects })
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
 
-    fs.unlinkSync(relative_path + "/videos/" + name);
-    return res.redirect('/')
 }
 
 
@@ -152,3 +190,4 @@ exports.changePassword = async (req, res, next) => {
     }
 
 }
+
