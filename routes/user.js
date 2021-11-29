@@ -7,9 +7,14 @@ const isAuth = require("../middleware/isAuth");
 const router = express.Router();
 
 
-router.get("/videos", isAuth, userController.videos);
-router.post("/videos", isAuth, userController.postVideo);
+router.get("/", isAuth, userController.user);
+router.get("/allprojects", userController.allprojects);
+router.get("/projects", isAuth, userController.projects);
+router.post("/projects", isAuth, userController.createProject);
+router.delete("/projects/:id", isAuth, userController.deleteProject);
 
 
+router.put('/info', isAuth, userController.updateInfo);
+router.put('/password', isAuth, userController.changePassword);
 
 module.exports = router;

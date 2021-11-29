@@ -19,7 +19,10 @@ const userSchema = new Schema({
     resetTokenExpr: Date,
     signUpToken: String,
     signUpTokenExpr: Date,
-    videos: [{}]
+    projects: [{
+        type: mongoose.Types.ObjectId,
+        ref:'Project'
+    }]
 
 });
 
