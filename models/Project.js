@@ -28,13 +28,16 @@ const projectSchema = new Schema({
         width:Number,
         frameRate:Number,
     },
-    videos: [
+    media: [
         {
             name: String,
             url: String,
             extension: String
         }
     ],
+    output:{
+        type:String,
+    },
     date: String
 
 });

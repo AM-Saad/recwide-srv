@@ -14,7 +14,7 @@ module.exports = (req, res, next) => {
     decodedToken = jwt.verify(token, "SomeSuperAsecretBymy");
   } catch (error) {
     return res.status(401).json({ message: 'Your not authuenticated', messageType: 'warning' })
-  }
+  } 
 
   if (!decodedToken) {
     return res.status(401).json({ message: 'Your not authuenticated', messageType: 'warning' })

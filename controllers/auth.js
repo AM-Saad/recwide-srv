@@ -9,7 +9,6 @@ exports.signUp = async (req, res, next) => {
     return res.status(422).json({ message: errors.array()[0].msg });
   }
   const { name, email, password } = req.body;
-  console.log(req.body);
   // const image = req.file.path.replace("\\", "/");
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -21,7 +20,6 @@ exports.signUp = async (req, res, next) => {
       videos: [],
     });
     await user.save();
-    console.log(user);
     return res.status(201).json({ message: "User Created", userId: user._id });
   } catch (error) {
     if (!error.statusCode) {
@@ -33,33 +31,40 @@ exports.signUp = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   const { email, password, rememberMe } = req.body;
-
+  console.log(req.body);
   try {
+    const users = await User.find();
+    // console.log(users)
     const user = await User.findOne({ email: email });
     console.log(user);
-    if (!user) return res.status(404).json({ message: 'Email OR password not correct!' });
+    if (!user)
+      return res
+        .status(404)
+        .json({ message: "Email OR password not correct!" });
 
     const isEqual = await bcrypt.compare(password, user.password);
     console.log(isEqual);
-    if (!isEqual) return res.status(404).json({ message: 'Email OR password not correct!' });
+    if (!isEqual)
+      return res
+        .status(404)
+        .json({ message: "Email OR password not correct!" });
 
     const token = jwt.sign(
       {
         name: user.name,
         id: user._id.toString(),
-        image: user.profilePicture
+        image: user.profilePicture,
       },
       "SomeSuperAsecretBymy",
-      { expiresIn: rememberMe ? '' : "9h" }
+      { expiresIn: rememberMe ? "7d" : "9h" }
     );
 
-    req.user = { _id: user._id, name: user.name, }
-    req.token = token
+    req.user = { _id: user._id, name: user.name };
+    req.token = token;
     req.isLoggedIn = true;
-    return await res.status(200).json({ token: token, user: user });
+    return  res.status(200).json({ token: token, user: user });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: 'Something went wrong' });
+    console.log(error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
 };
